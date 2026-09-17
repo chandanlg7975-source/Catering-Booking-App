@@ -5,9 +5,6 @@ from datetime import datetime
 import streamlit as st
 
 
-# -----------------------------
-# APP SETTINGS
-# -----------------------------
 st.set_page_config(
     page_title="FeastBook Catering",
     page_icon="🍽️",
@@ -17,23 +14,15 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        .main {
-            background-color: #fffaf5;
-        }
-
-        h1 {
-            color: #9b2226;
-        }
-
-        h2, h3 {
-            color: #7f1d1d;
-        }
+        .main { background-color: #fffaf5; }
+        h1 { color: #9b2226; }
+        h2, h3 { color: #7f1d1d; }
 
         div.stButton > button {
             background-color: #9b2226;
             color: white;
-            border: none;
             border-radius: 8px;
+            border: none;
             font-weight: bold;
         }
 
@@ -47,11 +36,8 @@ st.markdown(
 )
 
 
-# -----------------------------
-# DATABASE FUNCTIONS
-# -----------------------------
 def get_connection():
-    return sqlite3.connect("bookings.db", check_same_thread=False)
+    return sqlite3.connect("feastbook.db", check_same_thread=False)
 
 
 def create_database():
@@ -60,7 +46,7 @@ def create_database():
 
     cursor.execute(
         """
-        CREATE TABLE IF NOT EXISTS bookings (
+        CREATE TABLE IF NOT EXISTS app_bookings (
             booking_id TEXT PRIMARY KEY,
             customer_name TEXT,
             phone TEXT,
@@ -74,14 +60,14 @@ def create_database():
             caterer TEXT,
             guests INTEGER,
             total_price INTEGER,
-            booking_time TEXT
+            created_at TEXT
         )
         """
     )
 
     cursor.execute(
         """
-        CREATE TABLE IF NOT EXISTS reviews (
+        CREATE TABLE IF NOT EXISTS app_reviews (
             caterer TEXT,
             rating INTEGER,
             review TEXT,
@@ -114,13 +100,7 @@ def save_booking(
 
     cursor.execute(
         """
-        INSERT INTO bookings (
-            booking_id, customer_name, phone, event_type,
-            event_date, district, taluk, address,
-            food_type, menu, caterer, guests,
-            total_price, booking_time
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO app_bookings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             booking_id,
@@ -136,7 +116,7 @@ def save_booking(
             caterer,
             guests,
             total_price,
-            datetime.now().strftime("%d-%m-%Y %I:%M %p"),
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         ),
     )
 
@@ -149,10 +129,7 @@ def get_booking_by_id(booking_id):
     cursor = connection.cursor()
 
     cursor.execute(
-        """
-        SELECT * FROM bookings
-        WHERE booking_id = ?
-        """,
+        "SELECT * FROM app_bookings WHERE booking_id = ?",
         (booking_id,),
     )
 
@@ -170,8 +147,8 @@ def get_all_bookings():
         """
         SELECT booking_id, customer_name, phone, event_type,
         event_date, caterer, guests, total_price
-        FROM bookings
-        ORDER BY booking_time DESC
+        FROM app_bookings
+        ORDER BY created_at DESC
         """
     )
 
@@ -186,10 +163,7 @@ def save_review(caterer, rating, review):
     cursor = connection.cursor()
 
     cursor.execute(
-        """
-        INSERT INTO reviews (caterer, rating, review, created_at)
-        VALUES (?, ?, ?, ?)
-        """,
+        "INSERT INTO app_reviews VALUES (?, ?, ?, ?)",
         (
             caterer,
             rating,
@@ -207,11 +181,7 @@ def get_average_rating(caterer):
     cursor = connection.cursor()
 
     cursor.execute(
-        """
-        SELECT AVG(rating)
-        FROM reviews
-        WHERE caterer = ?
-        """,
+        "SELECT AVG(rating) FROM app_reviews WHERE caterer = ?",
         (caterer,),
     )
 
@@ -228,9 +198,9 @@ def get_reviews(caterer):
     cursor.execute(
         """
         SELECT rating, review, created_at
-        FROM reviews
+        FROM app_reviews
         WHERE caterer = ?
-        ORDER BY created_at DESC
+        ORDER BY rowid DESC
         """,
         (caterer,),
     )
@@ -244,9 +214,6 @@ def get_reviews(caterer):
 create_database()
 
 
-# -----------------------------
-# SAMPLE CATERER DATA
-# -----------------------------
 caterers = {
     "Whitefield": [
         {
@@ -342,29 +309,24 @@ menu_images = {
     "Mixed Menu": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
 }
 
+all_caterers = []
 
-# -----------------------------
-# APP HEADER
-# -----------------------------
+for area_data in caterers.values():
+    for caterer in area_data:
+        all_caterers.append(caterer["name"])
+
+
 st.title("🍽️ FeastBook")
 st.subheader("Catering & Hotel Food Booking Platform")
-st.write("Plan your wedding, birthday, reception, party, or college event in minutes.")
+st.write("Book food for weddings, birthdays, receptions, parties, and college events.")
 
 st.divider()
 
 book_tab, search_tab, rating_tab, admin_tab = st.tabs(
-    [
-        "📅 Book Catering",
-        "🔎 Find Booking",
-        "⭐ Ratings & Reviews",
-        "📊 Admin",
-    ]
+    ["📅 Book Catering", "🔎 Find Booking", "⭐ Ratings", "📊 Admin"]
 )
 
 
-# -----------------------------
-# BOOKING PAGE
-# -----------------------------
 with book_tab:
     st.header("Book Your Event Catering")
 
@@ -469,12 +431,10 @@ with book_tab:
 
     nearby_hotels = caterers[area]
 
-    card1, card2, card3 = st.columns(3)
+    cards = st.columns(3)
 
     for index, caterer in enumerate(nearby_hotels):
-        target_column = [card1, card2, card3][index]
-
-        with target_column:
+        with cards[index]:
             st.image(caterer["image"], use_container_width=True)
             st.markdown("### " + caterer["name"])
             st.write("💰 ₹" + str(caterer["price"]) + " per person")
@@ -484,54 +444,42 @@ with book_tab:
             if average:
                 st.write("⭐ " + str(round(average, 1)) + " / 5")
             else:
-                st.write("⭐ New caterer")
+                st.write("⭐ No ratings yet")
 
     hotel_names = []
 
     for caterer in nearby_hotels:
         hotel_names.append(caterer["name"])
 
-    selected_hotel = st.selectbox(
-        "Select Your Caterer",
-        hotel_names,
-    )
+    selected_hotel = st.selectbox("Select Your Caterer", hotel_names)
 
     selected_price = 0
-    selected_hotel_image = ""
+    selected_image = ""
 
     for caterer in nearby_hotels:
         if caterer["name"] == selected_hotel:
             selected_price = caterer["price"]
-            selected_hotel_image = caterer["image"]
+            selected_image = caterer["image"]
 
     total_price = guests * selected_price
 
-    st.divider()
+    image1, image2 = st.columns(2)
 
-    picture1, picture2 = st.columns(2)
-
-    with picture1:
+    with image1:
         st.subheader("Selected Caterer")
         st.image(
-            selected_hotel_image,
+            selected_image,
             caption=selected_hotel,
             use_container_width=True,
         )
 
-    with picture2:
-        st.subheader("Selected Menu")
+    with image2:
+        st.subheader("Selected Food Menu")
         st.image(
             menu_images[menu],
             caption=menu + " Menu",
             use_container_width=True,
         )
-
-    st.info(
-        "Selected Caterer: "
-        + selected_hotel
-        + " | Price per person: ₹"
-        + str(selected_price)
-    )
 
     metric1, metric2, metric3 = st.columns(3)
 
@@ -539,31 +487,22 @@ with book_tab:
     metric2.metric("Price Per Person", "₹" + format(selected_price, ","))
     metric3.metric("Estimated Total", "₹" + format(total_price, ","))
 
-    calculate = st.button(
-        "Calculate Booking Price",
-        use_container_width=True,
-    )
+    if st.button("Calculate Booking Price", use_container_width=True):
+        st.success("Estimated total: ₹" + format(total_price, ","))
 
-    if calculate:
-        st.success(
-            "Estimated total price: ₹" + format(total_price, ",")
-        )
-
-    confirm = st.button(
+    if st.button(
         "Confirm Booking",
         type="primary",
         use_container_width=True,
-    )
-
-    if confirm:
+    ):
         if name.strip() == "" or phone.strip() == "":
-            st.warning("Please enter customer name and phone number.")
+            st.warning("Please enter your name and phone number.")
 
         elif len(phone.strip()) != 10 or not phone.strip().isdigit():
-            st.warning("Enter a valid 10-digit phone number.")
+            st.warning("Please enter a valid 10-digit phone number.")
 
         elif taluk.strip() == "" or address.strip() == "":
-            st.warning("Please enter taluk and complete event address.")
+            st.warning("Please enter taluk and event address.")
 
         else:
             booking_id = "FB" + str(random.randint(100000, 999999))
@@ -587,37 +526,26 @@ with book_tab:
             st.success("Booking Confirmed Successfully! 🎉")
             st.balloons()
 
-            st.subheader("Booking Summary")
-
             st.write("**Booking ID:**", booking_id)
-            st.write("**Customer:**", name)
-            st.write("**Event:**", event_type)
-            st.write("**Event Date:**", event_date)
             st.write("**Caterer:**", selected_hotel)
-            st.write("**Menu:**", food_type + " - " + menu)
-            st.write("**Guests:**", guests)
-            st.write("**Total Price:** ₹" + format(total_price, ","))
+            st.write("**Estimated Price:** ₹" + format(total_price, ","))
 
             receipt = f"""FEASTBOOK CATERING RECEIPT
 
 Booking ID: {booking_id}
-Customer Name: {name}
+Customer: {name}
 Phone: {phone}
-
-Event Type: {event_type}
+Event: {event_type}
 Event Date: {event_date}
 District: {district}
 Taluk: {taluk}
 Address: {address}
-
 Caterer: {selected_hotel}
-Food Preference: {food_type}
-Menu: {menu}
+Food: {food_type} - {menu}
 Guests: {guests}
+Total Price: ₹{total_price:,}
 
-Total Estimated Price: ₹{total_price:,}
-
-Thank you for booking with FeastBook!
+Thank you for choosing FeastBook!
 """
 
             st.download_button(
@@ -628,112 +556,86 @@ Thank you for booking with FeastBook!
             )
 
 
-# -----------------------------
-# FIND BOOKING PAGE
-# -----------------------------
 with search_tab:
     st.header("Find Your Booking")
 
-    booking_id_search = st.text_input(
+    search_id = st.text_input(
         "Enter Booking ID",
         placeholder="Example: FB123456",
     )
 
     if st.button("Search Booking"):
-        found_booking = get_booking_by_id(booking_id_search.strip())
+        booking = get_booking_by_id(search_id.strip())
 
-        if found_booking:
+        if booking:
             st.success("Booking Found!")
 
-            st.write("**Booking ID:**", found_booking[0])
-            st.write("**Customer Name:**", found_booking[1])
-            st.write("**Event Type:**", found_booking[3])
-            st.write("**Event Date:**", found_booking[4])
-            st.write("**Caterer:**", found_booking[10])
-            st.write("**Guests:**", found_booking[11])
-            st.write(
-                "**Total Price:** ₹"
-                + format(found_booking[12], ",")
-            )
+            st.write("**Booking ID:**", booking[0])
+            st.write("**Customer:**", booking[1])
+            st.write("**Event:**", booking[3])
+            st.write("**Event Date:**", booking[4])
+            st.write("**Caterer:**", booking[10])
+            st.write("**Guests:**", booking[11])
+            st.write("**Price:** ₹" + format(booking[12], ","))
+
         else:
             st.warning("No booking found. Check the Booking ID.")
 
 
-# -----------------------------
-# RATING PAGE
-# -----------------------------
 with rating_tab:
     st.header("Rate Your Caterer")
 
     rating_caterer = st.selectbox(
-        "Select Caterer to Rate",
-        [
-            "Whitefield Grand Caterers",
-            "Taste Garden Whitefield",
-            "Royal Feast Whitefield",
-            "Marathahalli Food Palace",
-            "Spice Catering Marathahalli",
-            "Royal Feast Marathahalli",
-            "Koramangala Caterers",
-            "Food Hub Koramangala",
-            "Grand Wedding Food",
-            "HSR Food Palace",
-            "Taste Garden HSR",
-            "Bangalore Spice Caterers",
-            "Indiranagar Caterers",
-            "Royal Feast Indiranagar",
-            "Food Hub Indiranagar",
-        ],
+        "Select Caterer",
+        all_caterers,
     )
 
     rating = st.select_slider(
-        "Your Rating",
+        "Star Rating",
         options=[1, 2, 3, 4, 5],
         value=5,
     )
 
     review = st.text_area(
-        "Write Your Review",
-        placeholder="Example: Food was tasty and staff service was excellent.",
+        "Write a Review",
+        placeholder="Example: Food was tasty and service was excellent.",
     )
 
     if st.button("Submit Rating"):
         if review.strip() == "":
-            st.warning("Please write a review before submitting.")
+            st.warning("Please write a review.")
         else:
             save_review(rating_caterer, rating, review)
-            st.success("Thank you! Your rating was submitted.")
+            st.success("Thank you! Your review was submitted.")
 
     st.subheader("Customer Reviews")
 
-    average_rating = get_average_rating(rating_caterer)
+    average = get_average_rating(rating_caterer)
 
-    if average_rating:
+    if average:
         st.success(
             rating_caterer
             + " average rating: ⭐ "
-            + str(round(average_rating, 1))
+            + str(round(average, 1))
             + " / 5"
         )
 
     reviews = get_reviews(rating_caterer)
 
     if reviews:
-        for item in reviews:
-            st.write("⭐ " + str(item[0]) + " / 5")
-            st.write(item[1])
-            st.caption("Posted: " + item[2])
+        for review_item in reviews:
+            st.write("⭐ " + str(review_item[0]) + " / 5")
+            st.write(review_item[1])
+            st.caption("Posted: " + review_item[2])
             st.divider()
     else:
-        st.info("No reviews for this caterer yet.")
+        st.info("No reviews yet.")
 
 
-# -----------------------------
-# ADMIN PAGE
-# -----------------------------
 with admin_tab:
     st.header("Admin Dashboard")
-    st.info("Demo admin dashboard. A real project should use secure login.")
+
+    st.info("Demo password: admin123")
 
     admin_password = st.text_input(
         "Enter Admin Password",
@@ -741,16 +643,12 @@ with admin_tab:
     )
 
     if admin_password == "admin123":
-        st.success("Admin Access Granted")
+        bookings = get_all_bookings()
 
-        all_bookings = get_all_bookings()
-
-        if all_bookings:
-            st.subheader("Saved Bookings")
-
+        if bookings:
             booking_data = []
 
-            for booking in all_bookings:
+            for booking in bookings:
                 booking_data.append(
                     {
                         "Booking ID": booking[0],
@@ -764,20 +662,21 @@ with admin_tab:
                     }
                 )
 
-            st.dataframe(
-                booking_data,
-                use_container_width=True,
-            )
+            st.dataframe(booking_data, use_container_width=True)
 
-            total_orders = len(all_bookings)
+            total_bookings = len(bookings)
             total_sales = 0
 
-            for booking in all_bookings:
+            for booking in bookings:
                 total_sales = total_sales + booking[7]
 
             admin1, admin2 = st.columns(2)
-            admin1.metric("Total Bookings", total_orders)
-            admin2.metric("Estimated Sales", "₹" + format(total_sales, ","))
+
+            admin1.metric("Total Bookings", total_bookings)
+            admin2.metric(
+                "Estimated Sales",
+                "₹" + format(total_sales, ","),
+            )
 
         else:
             st.info("No bookings saved yet.")
@@ -790,5 +689,5 @@ st.divider()
 
 st.caption(
     "FeastBook is a college demonstration project. "
-    "No real payment or hotel booking is made."
+    "No real payment or real hotel booking is made."
 )
