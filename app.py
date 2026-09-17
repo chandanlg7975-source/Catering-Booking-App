@@ -5,6 +5,10 @@ from datetime import datetime
 import streamlit as st
 
 
+# --------------------------------------------------
+# APP SETTINGS
+# --------------------------------------------------
+
 st.set_page_config(
     page_title="FeastBook Catering",
     page_icon="🍽️",
@@ -14,9 +18,17 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        .main { background-color: #fffaf5; }
-        h1 { color: #9b2226; }
-        h2, h3 { color: #7f1d1d; }
+        .main {
+            background-color: #fffaf5;
+        }
+
+        h1 {
+            color: #9b2226;
+        }
+
+        h2, h3 {
+            color: #7f1d1d;
+        }
 
         div.stButton > button {
             background-color: #9b2226;
@@ -35,6 +47,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# --------------------------------------------------
+# DATABASE FUNCTIONS
+# --------------------------------------------------
 
 def get_connection():
     return sqlite3.connect("feastbook.db", check_same_thread=False)
@@ -78,6 +94,10 @@ def create_database():
 
     connection.commit()
     connection.close()
+
+
+def create_booking_id():
+    return "FB" + str(random.randint(100000, 999999))
 
 
 def save_booking(
@@ -214,6 +234,10 @@ def get_reviews(caterer):
 create_database()
 
 
+# --------------------------------------------------
+# CATERER DATA
+# --------------------------------------------------
+
 caterers = {
     "Whitefield": [
         {
@@ -316,16 +340,22 @@ for area_data in caterers.values():
         all_caterers.append(caterer["name"])
 
 
+# --------------------------------------------------
+# APP SCREEN
+# --------------------------------------------------
+
 st.title("🍽️ FeastBook")
 st.subheader("Catering & Hotel Food Booking Platform")
 st.write("Book food for weddings, birthdays, receptions, parties, and college events.")
-
-st.divider()
 
 book_tab, search_tab, rating_tab, admin_tab = st.tabs(
     ["📅 Book Catering", "🔎 Find Booking", "⭐ Ratings", "📊 Admin"]
 )
 
+
+# --------------------------------------------------
+# BOOKING TAB
+# --------------------------------------------------
 
 with book_tab:
     st.header("Book Your Event Catering")
@@ -377,37 +407,14 @@ with book_tab:
         district = st.selectbox(
             "Karnataka District",
             [
-                "Bagalkote",
-                "Ballari",
-                "Belagavi",
-                "Bengaluru Rural",
-                "Bengaluru Urban",
-                "Bidar",
-                "Chamarajanagar",
-                "Chikkaballapur",
-                "Chikkamagaluru",
-                "Chitradurga",
-                "Dakshina Kannada",
-                "Davanagere",
-                "Dharwad",
-                "Gadag",
-                "Hassan",
-                "Haveri",
-                "Kalaburagi",
-                "Kodagu",
-                "Kolar",
-                "Koppal",
-                "Mandya",
-                "Mysuru",
-                "Raichur",
-                "Ramanagara",
-                "Shivamogga",
-                "Tumakuru",
-                "Udupi",
-                "Uttara Kannada",
-                "Vijayapura",
-                "Vijayanagara",
-                "Yadgir",
+                "Bagalkote", "Ballari", "Belagavi", "Bengaluru Rural",
+                "Bengaluru Urban", "Bidar", "Chamarajanagar",
+                "Chikkaballapur", "Chikkamagaluru", "Chitradurga",
+                "Dakshina Kannada", "Davanagere", "Dharwad", "Gadag",
+                "Hassan", "Haveri", "Kalaburagi", "Kodagu", "Kolar",
+                "Koppal", "Mandya", "Mysuru", "Raichur", "Ramanagara",
+                "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada",
+                "Vijayapura", "Vijayanagara", "Yadgir",
             ],
         )
 
@@ -430,7 +437,6 @@ with book_tab:
     st.subheader("🏨 Choose a Caterer")
 
     nearby_hotels = caterers[area]
-
     cards = st.columns(3)
 
     for index, caterer in enumerate(nearby_hotels):
@@ -467,19 +473,11 @@ with book_tab:
 
     with image1:
         st.subheader("Selected Caterer")
-        st.image(
-            selected_image,
-            caption=selected_hotel,
-            use_container_width=True,
-        )
+        st.image(selected_image, caption=selected_hotel, use_container_width=True)
 
     with image2:
         st.subheader("Selected Food Menu")
-        st.image(
-            menu_images[menu],
-            caption=menu + " Menu",
-            use_container_width=True,
-        )
+        st.image(menu_images[menu], caption=menu + " Menu", use_container_width=True)
 
     metric1, metric2, metric3 = st.columns(3)
 
@@ -490,11 +488,7 @@ with book_tab:
     if st.button("Calculate Booking Price", use_container_width=True):
         st.success("Estimated total: ₹" + format(total_price, ","))
 
-    if st.button(
-        "Confirm Booking",
-        type="primary",
-        use_container_width=True,
-    ):
+    if st.button("Confirm Booking", type="primary", use_container_width=True):
         if name.strip() == "" or phone.strip() == "":
             st.warning("Please enter your name and phone number.")
 
@@ -505,7 +499,7 @@ with book_tab:
             st.warning("Please enter taluk and event address.")
 
         else:
-            booking_id = "FB" + str(random.randint(100000, 999999))
+            booking_id = create_booking_id()
 
             save_booking(
                 booking_id,
@@ -556,6 +550,10 @@ Thank you for choosing FeastBook!
             )
 
 
+# --------------------------------------------------
+# SEARCH BOOKING TAB
+# --------------------------------------------------
+
 with search_tab:
     st.header("Find Your Booking")
 
@@ -569,7 +567,6 @@ with search_tab:
 
         if booking:
             st.success("Booking Found!")
-
             st.write("**Booking ID:**", booking[0])
             st.write("**Customer:**", booking[1])
             st.write("**Event:**", booking[3])
@@ -581,6 +578,10 @@ with search_tab:
         else:
             st.warning("No booking found. Check the Booking ID.")
 
+
+# --------------------------------------------------
+# RATING TAB
+# --------------------------------------------------
 
 with rating_tab:
     st.header("Rate Your Caterer")
@@ -632,6 +633,10 @@ with rating_tab:
         st.info("No reviews yet.")
 
 
+# --------------------------------------------------
+# ADMIN TAB
+# --------------------------------------------------
+
 with admin_tab:
     st.header("Admin Dashboard")
 
@@ -673,10 +678,7 @@ with admin_tab:
             admin1, admin2 = st.columns(2)
 
             admin1.metric("Total Bookings", total_bookings)
-            admin2.metric(
-                "Estimated Sales",
-                "₹" + format(total_sales, ","),
-            )
+            admin2.metric("Estimated Sales", "₹" + format(total_sales, ","))
 
         else:
             st.info("No bookings saved yet.")
