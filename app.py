@@ -4,9 +4,10 @@ import sqlite3
 import streamlit as st
 
 
-def create_booking_database():
+def create_database():
     connection = sqlite3.connect("bookings.db")
     cursor = connection.cursor()
+
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS bookings (
@@ -23,6 +24,17 @@ def create_booking_database():
         )
         """
     )
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS reviews (
+            caterer TEXT,
+            rating INTEGER,
+            review TEXT
+        )
+        """
+    )
+
     connection.commit()
     connection.close()
 
@@ -30,17 +42,18 @@ def create_booking_database():
 def save_booking(
     booking_id,
     customer_name,
-    customer_phone,
-    selected_event,
-    selected_date,
-    selected_district,
-    selected_taluk,
-    selected_caterer,
-    guest_count,
-    price,
+    phone,
+    event_type,
+    event_date,
+    district,
+    taluk,
+    caterer,
+    guests,
+    total_price,
 ):
     connection = sqlite3.connect("bookings.db")
     cursor = connection.cursor()
+
     cursor.execute(
         """
         INSERT INTO bookings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -48,85 +61,171 @@ def save_booking(
         (
             booking_id,
             customer_name,
-            customer_phone,
-            selected_event,
-            str(selected_date),
-            selected_district,
-            selected_taluk,
-            selected_caterer,
-            guest_count,
-            price,
+            phone,
+            event_type,
+            str(event_date),
+            district,
+            taluk,
+            caterer,
+            guests,
+            total_price,
         ),
     )
+
     connection.commit()
     connection.close()
-
-
-def get_bookings():
-    connection = sqlite3.connect("bookings.db")
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM bookings")
-    saved_bookings = cursor.fetchall()
-    connection.close()
-    return saved_bookings
 
 
 def get_booking_by_id(booking_id):
     connection = sqlite3.connect("bookings.db")
     cursor = connection.cursor()
-    cursor.execute("SELECT * FROM bookings WHERE booking_id = ?", (booking_id,))
-    saved_booking = cursor.fetchone()
+
+    cursor.execute(
+        "SELECT * FROM bookings WHERE booking_id = ?",
+        (booking_id,),
+    )
+
+    booking = cursor.fetchone()
+
     connection.close()
-    return saved_booking
+    return booking
 
 
-create_booking_database()
+def get_bookings():
+    connection = sqlite3.connect("bookings.db")
+    cursor = connection.cursor()
 
-st.set_page_config(page_title="Catering Booking App", page_icon="🍽️")
+    cursor.execute("SELECT * FROM bookings")
+    bookings = cursor.fetchall()
+
+    connection.close()
+    return bookings
+
+
+def save_review(caterer, rating, review):
+    connection = sqlite3.connect("bookings.db")
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "INSERT INTO reviews VALUES (?, ?, ?)",
+        (caterer, rating, review),
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def get_average_rating(caterer):
+    connection = sqlite3.connect("bookings.db")
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT AVG(rating) FROM reviews WHERE caterer = ?",
+        (caterer,),
+    )
+
+    average_rating = cursor.fetchone()[0]
+
+    connection.close()
+    return average_rating
+
+
+create_database()
+
+st.set_page_config(
+    page_title="Catering Booking App",
+    page_icon="🍽️",
+)
 
 st.title("🍽️ Catering & Hotel Food Booking")
 st.write("Book food for weddings, birthdays, receptions, and parties.")
 
 st.header("Customer Details")
+
 name = st.text_input("Enter your name")
 phone = st.text_input("Enter your phone number")
 
 st.header("Event Details")
+
 event_type = st.selectbox(
     "Select event type",
     ["Wedding", "Reception", "Birthday Party", "College Event", "Other"],
 )
+
 event_date = st.date_input("Select event date")
+
 guests = st.number_input(
-    "Number of guests", min_value=1, max_value=10000, value=100
+    "Number of guests",
+    min_value=1,
+    max_value=10000,
+    value=100,
 )
 
 st.header("Food Menu")
-food_type = st.radio("Food preference", ["Vegetarian", "Non-vegetarian"])
+
+food_type = st.radio(
+    "Food preference",
+    ["Vegetarian", "Non-vegetarian"],
+)
+
 menu = st.selectbox(
-    "Select menu type", ["South Indian", "North Indian", "Chinese", "Mixed Menu"]
+    "Select menu type",
+    ["South Indian", "North Indian", "Chinese", "Mixed Menu"],
 )
 
 st.header("Customer Location")
+
 district = st.selectbox(
     "Select Karnataka district",
     [
-        "Bagalkote", "Ballari", "Belagavi", "Bengaluru Rural",
-        "Bengaluru Urban", "Bidar", "Chamarajanagar", "Chikkaballapur",
-        "Chikkamagaluru", "Chitradurga", "Dakshina Kannada", "Davanagere",
-        "Dharwad", "Gadag", "Hassan", "Haveri", "Kalaburagi", "Kodagu",
-        "Kolar", "Koppal", "Mandya", "Mysuru", "Raichur", "Ramanagara",
-        "Shivamogga", "Tumakuru", "Udupi", "Uttara Kannada", "Vijayapura",
-        "Vijayanagara", "Yadgir",
+        "Bagalkote",
+        "Ballari",
+        "Belagavi",
+        "Bengaluru Rural",
+        "Bengaluru Urban",
+        "Bidar",
+        "Chamarajanagar",
+        "Chikkaballapur",
+        "Chikkamagaluru",
+        "Chitradurga",
+        "Dakshina Kannada",
+        "Davanagere",
+        "Dharwad",
+        "Gadag",
+        "Hassan",
+        "Haveri",
+        "Kalaburagi",
+        "Kodagu",
+        "Kolar",
+        "Koppal",
+        "Mandya",
+        "Mysuru",
+        "Raichur",
+        "Ramanagara",
+        "Shivamogga",
+        "Tumakuru",
+        "Udupi",
+        "Uttara Kannada",
+        "Vijayapura",
+        "Vijayanagara",
+        "Yadgir",
     ],
 )
+
 taluk = st.text_input("Enter your taluk")
 address = st.text_area("Enter event address")
 
 st.header("Nearby Caterers")
+
 area = st.selectbox(
     "Select nearby area",
-    ["Whitefield", "Marathahalli", "Koramangala", "HSR Layout", "Indiranagar"],
+    [
+        "Whitefield",
+        "Marathahalli",
+        "Koramangala",
+        "HSR Layout",
+        "Indiranagar",
+    ],
 )
 
 caterers = {
@@ -157,13 +256,43 @@ caterers = {
     ],
 }
 
+hotel_images = {
+    "Whitefield Grand Caterers": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Taste Garden Whitefield": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Royal Feast Whitefield": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Marathahalli Food Palace": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Spice Catering Marathahalli": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Royal Feast Marathahalli": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Koramangala Caterers": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Food Hub Koramangala": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Grand Wedding Food": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "HSR Food Palace": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Taste Garden HSR": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Bangalore Spice Caterers": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Indiranagar Caterers": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Royal Feast Indiranagar": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    "Food Hub Indiranagar": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+}
+
+menu_images = {
+    "South Indian": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80",
+    "North Indian": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80",
+    "Chinese": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80",
+    "Mixed Menu": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80",
+}
+
 nearby_hotels = caterers[area]
+
 hotel_names = []
 
 for caterer in nearby_hotels:
     hotel_names.append(caterer["name"])
 
-selected_hotel = st.selectbox("Select a nearby hotel or caterer", hotel_names)
+selected_hotel = st.selectbox(
+    "Select a nearby hotel or caterer",
+    hotel_names,
+)
+
 selected_price = 0
 
 for caterer in nearby_hotels:
@@ -179,16 +308,47 @@ st.info(
     + str(selected_price)
 )
 
+st.subheader("Hotel Picture")
+st.image(
+    hotel_images[selected_hotel],
+    caption=selected_hotel + " - Sample Hotel Picture",
+    use_container_width=True,
+)
+
+st.subheader("Menu Picture")
+st.image(
+    menu_images[menu],
+    caption=menu + " - Sample Food Menu Picture",
+    use_container_width=True,
+)
+
+average_rating = get_average_rating(selected_hotel)
+
+if average_rating:
+    st.write(
+        "Hotel rating: ⭐ "
+        + str(round(average_rating, 1))
+        + " / 5"
+    )
+else:
+    st.write("Hotel rating: No ratings yet.")
+
 st.header("Booking")
 
 if st.button("Calculate Booking Price"):
-    st.success("Estimated total price: ₹" + format(total_price, ","))
+    st.success(
+        "Estimated total price: ₹" + format(total_price, ",")
+    )
 
 if st.button("Confirm Booking"):
     if name == "" or phone == "" or taluk == "" or address == "":
-        st.warning("Please enter name, phone, taluk, and event address.")
+        st.warning(
+            "Please enter name, phone, taluk, and event address."
+        )
+
     elif len(phone) != 10 or not phone.isdigit():
         st.warning("Please enter a valid 10-digit phone number.")
+
     else:
         booking_id = "BK" + str(random.randint(10000, 99999))
 
@@ -220,10 +380,12 @@ if st.button("Confirm Booking"):
         st.write("Menu:", menu)
         st.write("Guests:", guests)
         st.write("Caterer:", selected_hotel)
-        st.success("Total estimated price: ₹" + format(total_price, ","))
-        st.balloons()
 
-        receipt = f"""CATERING & HOTEL FOOD BOOKING RECEIPT
+        st.success(
+            "Total estimated price: ₹" + format(total_price, ",")
+        )
+
+        receipt = f"""CATERING BOOKING RECEIPT
 
 Booking ID: {booking_id}
 Customer Name: {name}
@@ -247,13 +409,33 @@ Total Estimated Price: ₹{total_price:,}
             mime="text/plain",
         )
 
+        st.balloons()
+
+st.header("Rate Your Caterer")
+
+rating = st.selectbox(
+    "Give a star rating",
+    [1, 2, 3, 4, 5],
+)
+
+review = st.text_area(
+    "Write your review",
+    placeholder="Example: Food was tasty and service was good.",
+)
+
+if st.button("Submit Rating"):
+    if review == "":
+        st.warning("Please write a review.")
+    else:
+        save_review(selected_hotel, rating, review)
+        st.success("Thank you! Your rating was submitted.")
+
 st.header("Admin")
 
 if st.button("View Saved Bookings"):
     saved_bookings = get_bookings()
 
     if saved_bookings:
-        st.subheader("Saved Customer Bookings")
         st.dataframe(
             saved_bookings,
             column_config={
@@ -275,7 +457,10 @@ if st.button("View Saved Bookings"):
         st.info("No bookings saved yet.")
 
 st.header("Find Your Booking")
-search_booking_id = st.text_input("Enter your booking ID, for example BK12345")
+
+search_booking_id = st.text_input(
+    "Enter your booking ID, for example BK12345"
+)
 
 if st.button("Search Booking"):
     found_booking = get_booking_by_id(search_booking_id.strip())
@@ -287,7 +472,9 @@ if st.button("Search Booking"):
         st.write("Event date:", found_booking[4])
         st.write("Caterer:", found_booking[7])
         st.write("Guests:", found_booking[8])
-        st.write("Total price: ₹" + format(found_booking[9], ","))
+        st.write(
+            "Total price: ₹" + format(found_booking[9], ",")
+        )
     else:
         st.warning("No booking was found with this booking ID.")
 
